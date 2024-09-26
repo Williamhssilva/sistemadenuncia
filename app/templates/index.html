@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DenunciaFutura - Sistema de Denúncias Anônimas</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <a href="/" class="navbar-brand">DenunciaFutura</a>
+            <div class="navbar-menu">
+                <a href="/dashboard">Dashboard</a>
+            </div>
+        </div>
+    </nav>
+    <div class="container">
+        <h1>Faça sua denúncia anônima</h1>
+        <div class="card">
+            <form id="denunciaForm">
+                <select id="categoria" required>
+                    <option value="">Selecione a categoria</option>
+                    <option value="Corrupção">Corrupção</option>
+                    <option value="Assédio">Assédio</option>
+                    <option value="Fraude">Fraude</option>
+                    <option value="Discriminação">Discriminação</option>
+                    <option value="Outros">Outros</option>
+                </select>
+                <input type="text" id="local" placeholder="Local da ocorrência">
+                <input type="date" id="dataOcorrencia">
+                <textarea id="conteudoDenuncia" placeholder="Descreva sua denúncia aqui..." required></textarea>
+                <button type="submit" class="btn btn-primary">Enviar Denúncia</button>
+            </form>
+        </div>
+        <div id="mensagem"></div>
+    </div>
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-links">
+                    <a href="/">Início</a>
+                    <a href="/dashboard">Dashboard</a>
+                </div>
+                <div class="footer-text">
+                    &copy; 2023 CONSEP-CD. Todos os direitos reservados.
+                </div>
+            </div>
+        </div>
+    </footer>
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>
