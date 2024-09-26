@@ -20,7 +20,11 @@ document.addEventListener('DOMContentLoaded', function() {
         
         if (!tbody && !categoriasCanvas && !statusCanvas && !denunciasCanvas) return;
 
-        fetch('/get_dashboard_data')
+        // Obter a página atual da URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const currentPage = urlParams.get('page') || 1;
+
+        fetch(`/get_dashboard_data?page=${currentPage}`)
             .then(response => response.json())
             .then(data => {
                 if (tbody) {
@@ -43,6 +47,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     adicionarEventListenersLinhas();
                 }
 
+                // Atualizar a paginação
+                atualizarPaginacao(data.total_pages, currentPage);
+
                 if (categoriasCanvas) {
                     categoriasChart = atualizarGrafico(categoriasChart, categoriasCanvas, data.categorias, 'Categorias');
                 }
@@ -60,6 +67,30 @@ document.addEventListener('DOMContentLoaded', function() {
                     totalDenuncias.textContent = data.total_denuncias;
                 }
             });
+    }
+
+    function atualizarPaginacao(totalPages, currentPage) {
+        const paginationDiv = document.querySelector('.pagination');
+        if (!paginationDiv) return;
+
+        let paginationHTML = '';
+        if (currentPage > 1) {
+            paginationHTML += `<a href="?page=${currentPage - 1}">&laquo; Anterior</a>`;
+        }
+
+        for (let i = 1; i <= totalPages; i++) {
+            if (i === currentPage) {
+                paginationHTML += `<strong>${i}</strong>`;
+            } else {
+                paginationHTML += `<a href="?page=${i}">${i}</a>`;
+            }
+        }
+
+        if (currentPage < totalPages) {
+            paginationHTML += `<a href="?page=${currentPage + 1}">Próxima &raquo;</a>`;
+        }
+
+        paginationDiv.innerHTML = paginationHTML;
     }
 
     function adicionarEventListenersLinhas() {

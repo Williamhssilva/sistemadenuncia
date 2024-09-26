@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - DenunciaFutura</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <a href="/" class="navbar-brand">DenunciaFutura</a>
+            <div class="navbar-menu">
+                <a href="/">Início</a>
+            </div>
+        </div>
+    </nav>
+    <div class="container">
+        <h1>Login</h1>
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                <div class="alert alert-danger">
+                    {{ messages[0] }}
+                </div>
+            {% endif %}
+        {% endwith %}
+        <div class="card">
+            <form method="POST" action="{{ url_for('login') }}">
+                <input type="text" name="username" placeholder="Nome de usuário" required>
+                <input type="password" name="password" placeholder="Senha" required>
+                <button type="submit" class="btn btn-primary">Entrar</button>
+            </form>
+        </div>
+    </div>
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-links">
+                    <a href="/">Início</a>
+                </div>
+                <div class="footer-text">
+                    &copy; 2023 CONSEP-CD. Todos os direitos reservados.
+                </div>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>

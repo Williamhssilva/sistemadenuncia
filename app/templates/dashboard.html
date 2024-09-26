@@ -13,8 +13,8 @@
         <div class="container">
             <a href="/" class="navbar-brand">DenunciaFutura</a>
             <div class="navbar-menu">
-                <a href="/">Início</a>
-                <a href="/dashboard">Dashboard</a>
+                <a href="/">Fazer uma denúncia</a>
+                <a href="{{ url_for('logout') }}">Sair</a>
             </div>
         </div>
     </nav>
@@ -58,19 +58,41 @@
                   </tr>
                 </thead>
                 <tbody>
-                  {% for denuncia in denuncias %}
-                  <tr class="denuncia-row" data-id="{{ denuncia['id'] }}">
-                    <td>{{ denuncia['id'] }}</td>
-                    <td>{{ denuncia['categoria'] }}</td>
-                    <td>{{ denuncia['local'] or 'N/A' }}</td>
-                    <td>{{ denuncia['data_ocorrencia'].strftime('%d/%m/%Y') if denuncia['data_ocorrencia'] else 'N/A' }}</td>
-                    <td class="conteudo-col">{{ denuncia['conteudo'] if denuncia['conteudo'] else 'N/A' }}</td>
-                    <td>{{ denuncia['status'] }}</td>
-                    <td>{{ denuncia['data_criacao'].strftime('%d/%m/%Y %H:%M') if denuncia['data_criacao'] else 'N/A' }}</td>
+                  {% for denuncia in denuncias.items %}
+                  <tr class="denuncia-row" data-id="{{ denuncia.id }}">
+                    <td>{{ denuncia.id }}</td>
+                    <td>{{ denuncia.categoria }}</td>
+                    <td>{{ denuncia.local or 'N/A' }}</td>
+                    <td>{{ denuncia.data_ocorrencia.strftime('%d/%m/%Y') if denuncia.data_ocorrencia else 'N/A' }}</td>
+                    <td class="conteudo-col">{{ denuncia.conteudo if denuncia.conteudo else 'N/A' }}</td>
+                    <td>{{ denuncia.status }}</td>
+                    <td>{{ denuncia.data_criacao.strftime('%d/%m/%Y %H:%M') if denuncia.data_criacao else 'N/A' }}</td>
                   </tr>
                   {% endfor %}
                 </tbody>
               </table>
+        </div>
+
+        <div class="pagination">
+            {% if denuncias.has_prev %}
+                <a href="{{ url_for('dashboard', page=denuncias.prev_num) }}">&laquo; Anterior</a>
+            {% endif %}
+
+            {% for page_num in denuncias.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}
+                {% if page_num %}
+                    {% if denuncias.page == page_num %}
+                        <strong>{{ page_num }}</strong>
+                    {% else %}
+                        <a href="{{ url_for('dashboard', page=page_num) }}">{{ page_num }}</a>
+                    {% endif %}
+                {% else %}
+                    ...
+                {% endif %}
+            {% endfor %}
+
+            {% if denuncias.has_next %}
+                <a href="{{ url_for('dashboard', page=denuncias.next_num) }}">Próxima &raquo;</a>
+            {% endif %}
         </div>
 
         <!-- Modal -->
@@ -102,8 +124,8 @@
         <div class="container">
             <div class="footer-content">
                 <div class="footer-links">
-                    <a href="/">Início</a>
-                    <a href="/dashboard">Dashboard</a>
+                    <a href="/">Fazer uma denúncia</a>
+                    <a href="/dashboard">Topo</a>
                 </div>
                 <div class="footer-text">
                     &copy; 2023 CONSEP-CD. Todos os direitos reservados.

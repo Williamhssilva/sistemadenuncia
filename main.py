@@ -1,5 +1,7 @@
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, jsonify, render_template, redirect, url_for, flash
 from flask_sqlalchemy import SQLAlchemy
+from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
+from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, timedelta
 import os
 import logging
@@ -12,6 +14,7 @@ template_dir = os.path.abspath('app/templates')
 static_dir = os.path.abspath('app/static')
 
 app = Flask(__name__, template_folder=template_dir, static_folder=static_dir)
+app.config['SECRET_KEY'] = 'sua_chave_secreta_aqui'  # Mude isso para uma chave secreta real
 
 # Configuração do banco de dados
 basedir = os.path.abspath(os.path.dirname(__file__))
@@ -19,6 +22,13 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'de
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
+login_manager = LoginManager(app)
+login_manager.login_view = 'login'
+
+class User(UserMixin, db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(100), unique=True, nullable=False)
+    password = db.Column(db.String(200), nullable=False)
 
 class Denuncia(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -42,9 +52,35 @@ class Denuncia(db.Model):
             'data_criacao': self.data_criacao.isoformat()
         }
 
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        user = User.query.filter_by(username=username).first()
+        if user and check_password_hash(user.password, password):
+            login_user(user)
+            return redirect(url_for('dashboard'))
+        else:
+            flash('Credenciais inválidas. Tente novamente.', 'error')
+    return render_template('login.html')
+
+@app.route('/logout')
+@login_required
+def logout():
+    logout_user()
+    return redirect(url_for('index'))
+
 @app.route('/')
 def index():
-    return render_template('index.html')
+    page = request.args.get('page', 1, type=int)
+    per_page = 10  # Número de denúncias por página
+    denuncias = Denuncia.query.order_by(Denuncia.data_criacao.desc()).paginate(page=page, per_page=per_page, error_out=False)
+    return render_template('index.html', denuncias=denuncias)
 
 @app.route('/denunciar', methods=['POST'])
 def criar_denuncia():
@@ -67,39 +103,30 @@ def criar_denuncia():
         return jsonify({"error": "Erro ao processar a denúncia"}), 500
 
 @app.route('/dashboard')
+@login_required
 def dashboard():
-    denuncias = Denuncia.query.options(joinedload('*')).all()
-    denuncias_dict = []
-    for denuncia in denuncias:
-        denuncia_dict = denuncia.to_dict()
-        denuncia_dict['data_criacao'] = denuncia.data_criacao
-        denuncia_dict['data_ocorrencia'] = denuncia.data_ocorrencia
-        denuncias_dict.append(denuncia_dict)
-
-    total_denuncias = len(denuncias_dict)
+    page = request.args.get('page', 1, type=int)
+    per_page = 10  # Número de denúncias por página
+    denuncias = Denuncia.query.order_by(Denuncia.data_criacao.desc()).paginate(page=page, per_page=per_page, error_out=False)
     
-    categorias = {}
-    status = {}
+    total_denuncias = Denuncia.query.count()
     
-    for denuncia in denuncias_dict:
-        categorias[denuncia['categoria']] = categorias.get(denuncia['categoria'], 0) + 1
-        status[denuncia['status']] = status.get(denuncia['status'], 0) + 1
+    categorias = db.session.query(Denuncia.categoria, db.func.count(Denuncia.id)).group_by(Denuncia.categoria).all()
+    categorias = {categoria: count for categoria, count in categorias}
     
-    # Converter para porcentagens
-    for cat in categorias:
-        categorias[cat] = round((categorias[cat] / total_denuncias) * 100, 2) if total_denuncias > 0 else 0
+    status = db.session.query(Denuncia.status, db.func.count(Denuncia.id)).group_by(Denuncia.status).all()
+    status = {s: count for s, count in status}
     
-    for st in status:
-        status[st] = round((status[st] / total_denuncias) * 100, 2) if total_denuncias > 0 else 0
-    
-    return render_template('dashboard.html', denuncias=denuncias_dict, total_denuncias=total_denuncias, categorias=categorias, status=status)
+    return render_template('dashboard.html', denuncias=denuncias, total_denuncias=total_denuncias, categorias=categorias, status=status)
 
 @app.route('/denuncia/<int:id>')
+@login_required
 def get_denuncia(id):
     denuncia = Denuncia.query.get_or_404(id)
     return jsonify(denuncia.to_dict())
 
 @app.route('/atualizar_status/<int:id>', methods=['POST'])
+@login_required
 def atualizar_status(id):
     denuncia = Denuncia.query.get_or_404(id)
     novo_status = request.json.get('status')
@@ -111,12 +138,18 @@ def atualizar_status(id):
         return jsonify({"error": "Status inválido"}), 400
 
 @app.route('/get_denuncias')
+@login_required
 def get_denuncias():
     denuncias = Denuncia.query.all()
     return jsonify([denuncia.to_dict() for denuncia in denuncias])
 
 @app.route('/get_dashboard_data')
+@login_required
 def get_dashboard_data():
+    page = request.args.get('page', 1, type=int)
+    per_page = 10  # Número de denúncias por página
+    denuncias_paginadas = Denuncia.query.order_by(Denuncia.data_criacao.desc()).paginate(page=page, per_page=per_page, error_out=False)
+    
     denuncias = Denuncia.query.all()
     total_denuncias = len(denuncias)
     
@@ -149,10 +182,20 @@ def get_dashboard_data():
         'categorias': categorias,
         'status': status,
         'denuncias_por_dia': denuncias_por_dia,
-        'denuncias': [denuncia.to_dict() for denuncia in denuncias]
+        'denuncias': [denuncia.to_dict() for denuncia in denuncias_paginadas.items],
+        'total_pages': denuncias_paginadas.pages,
+        'current_page': page
     })
 
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
+        # Crie um usuário de teste se não existir
+        if not User.query.filter_by(username='admin').first():
+            hashed_password = generate_password_hash('senha123')
+            new_user = User(username='admin', password=hashed_password)
+            db.session.add(new_user)
+            db.session.commit()
     app.run(debug=True)
+    
+    from app import app, db, Denuncia
